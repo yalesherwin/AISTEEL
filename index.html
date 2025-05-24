@@ -74,8 +74,6 @@
   <input type="text" id="userInput" placeholder="请输入内容，例如：0.4mm彩涂卷 锌层20g FOB天津港">
 
   <script>
-    const apiKey = "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"; // 替换为你的 OpenAI API Key
-
     function addMessage(role, text) {
       const chatbox = document.getElementById("chatbox");
       const msg = document.createElement("div");
@@ -87,11 +85,10 @@
 
     async function askGPT(text) {
       try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        const res = await fetch("https://steel-gpt-proxy.onrender.com/chat", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
@@ -126,4 +123,3 @@
   </script>
 </body>
 </html>
-
