@@ -19,9 +19,9 @@
   <input type="text" id="userInput" placeholder="请输入内容，例如：0.4mm彩涂卷 锌层20g FOB天津港">
 
   <script>
-    const apiKey = "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";
+    const apiKey = "sk-proj-xxx"; // 替换为你的 OpenAI API Key
     const sheetId = "1L8RGRPI7BdIlDew99K7QIXU5f7llOLqWqskwXb1lms4";
-    const apiKeySheet = "AIzaSyB-io6C9S0y5I6YXMi9TrDbAx8PkC2ReKo";
+    const apiKeySheet = "AIzaSyB-xxx"; // 替换为你的 Google Sheets API Key
     const portKeywords = ["港口", "青岛", "天津", "送到", "fob"];
 
     const productMatch = [
@@ -31,6 +31,14 @@
       { key: "镀铝锌", value: "镀铝锌无耐指纹" },
       { key: "网纹", value: "网纹板" }
     ];
+
+    const quickReplies = {
+      "你好": "您好，欢迎来到 CHINACNU 智能报价系统，请输入钢卷产品信息。",
+      "你是谁": "我是 CHINACNU 智能钢铁助手，帮助您快速报价。",
+      "你们公司在哪": "我们总部位于中国山东，支持全球出口服务。",
+      "可以发货吗": "我们支持海运交付，常发港口包括天津港、青岛港。",
+      "付款方式": "我们支持T/T电汇、信用证等方式，具体请联系业务员确认。"
+    };
 
     function addMessage(role, text) {
       const chatbox = document.getElementById("chatbox");
@@ -95,22 +103,27 @@
     }
 
     async function askGPT(text) {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "你是钢铁外贸专家，尽量准确报价并识别规格。" },
-            { role: "user", content: text }
-          ]
-        })
-      });
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content || "🤖 抱歉，未能理解您的问题。";
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              { role: "system", content: "你是钢铁外贸专家，尽量准确报价并识别规格。" },
+              { role: "user", content: text }
+            ]
+          })
+        });
+        const data = await res.json();
+        if (!data.choices || !data.choices[0]) return "🤖 系统暂时无法响应，请稍后再试。";
+        return data.choices[0].message.content;
+      } catch (e) {
+        return "🤖 抱歉，服务器连接失败，请稍后再试。";
+      }
     }
 
     document.getElementById("userInput").addEventListener("keypress", async function(e) {
@@ -119,6 +132,12 @@
         if (!input) return;
         addMessage("user", input);
         this.value = "";
+
+        const lower = input.toLowerCase();
+        if (quickReplies[lower]) {
+          addMessage("bot", quickReplies[lower]);
+          return;
+        }
 
         const params = extractParams(input);
         if (params.product && params.thickness) {
