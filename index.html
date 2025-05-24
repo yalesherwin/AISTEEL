@@ -4,13 +4,68 @@
   <meta charset="UTF-8" />
   <title>CHINACNU 智能钢卷报价系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; background: #f4f6f8; }
-    h1 { color: #2e7d32; text-align: center; }
-    #chatbox { background: white; border-radius: 10px; padding: 20px; height: 500px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; }
-    .user { color: blue; margin-top: 10px; }
-    .bot { color: green; margin-bottom: 10px; }
-    input[type="text"] { width: 100%; padding: 10px; font-size: 16px; margin-top: 10px; }
+    body {
+      font-family: 'Orbitron', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 2em;
+      color: #00ffc6;
+      text-shadow: 0 0 10px #00ffc6;
+    }
+
+    #chatbox {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      width: 90%;
+      max-width: 800px;
+      height: 500px;
+      overflow-y: auto;
+      margin: 20px 0;
+      backdrop-filter: blur(6px);
+    }
+
+    .user {
+      color: #00aaff;
+      margin-top: 10px;
+    }
+
+    .bot {
+      color: #00ffc6;
+      margin-bottom: 10px;
+    }
+
+    input[type="text"] {
+      width: 90%;
+      max-width: 800px;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+      background: #ffffff10;
+      color: #fff;
+      box-shadow: 0 0 10px #00ffc655;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"]::placeholder {
+      color: #cccccc;
+    }
   </style>
 </head>
 <body>
@@ -20,86 +75,14 @@
 
   <script>
     const apiKey = "sk-proj-xxx"; // 替换为你的 OpenAI API Key
-    const sheetId = "1L8RGRPI7BdIlDew99K7QIXU5f7llOLqWqskwXb1lms4";
-    const apiKeySheet = "AIzaSyB-xxx"; // 替换为你的 Google Sheets API Key
-    const portKeywords = ["港口", "青岛", "天津", "送到", "fob"];
-
-    const productMatch = [
-      { key: "彩涂", value: "彩涂板(新增)" },
-      { key: "有花镀锌 厚", value: "有花镀锌 厚板" },
-      { key: "有花镀锌 薄", value: "有花镀锌 (薄板)带精包" },
-      { key: "镀铝锌", value: "镀铝锌无耐指纹" },
-      { key: "网纹", value: "网纹板" }
-    ];
-
-    const quickReplies = {
-      "你好": "您好，欢迎来到 CHINACNU 智能报价系统，请输入钢卷产品信息。",
-      "你是谁": "我是 CHINACNU 智能钢铁助手，帮助您快速报价。",
-      "你们公司在哪": "我们总部位于中国山东，支持全球出口服务。",
-      "可以发货吗": "我们支持海运交付，常发港口包括天津港、青岛港。",
-      "付款方式": "我们支持T/T电汇、信用证等方式，具体请联系业务员确认。"
-    };
 
     function addMessage(role, text) {
       const chatbox = document.getElementById("chatbox");
       const msg = document.createElement("div");
       msg.className = role;
-      msg.innerHTML = `<strong>${role === 'user' ? '客户' : '机器人'}:</strong> ${text}`;
+      msg.innerHTML = `<strong>${role === 'user' ? '客户' : '西恩'}:</strong> ${text}`;
       chatbox.appendChild(msg);
       chatbox.scrollTop = chatbox.scrollHeight;
-    }
-
-    function extractParams(text) {
-      const thickness = (text.match(/(\d+\.\d+)\s*mm/i) || [])[1];
-      const zinc = (text.match(/(\d+)\s*(g|克)/i) || [])[1];
-      const product = productMatch.find(p => text.includes(p.key))?.value;
-      const port = portKeywords.some(k => text.toLowerCase().includes(k));
-      return { product, thickness, zinc, port };
-    }
-
-    async function fetchSheetPrice(product, thickness) {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/'${encodeURIComponent(product)}'!A1:Z100?key=${apiKeySheet}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const headers = data.values[0];
-      const rows = data.values.slice(1);
-      const thicknessCol = headers.findIndex(h => h.includes("厚度"));
-      const priceCol = headers.findIndex(h => h.includes("1000RMB"));
-      let closest = null, minDiff = Infinity;
-      for (const row of rows) {
-        const t = parseFloat(row[thicknessCol]);
-        if (!isNaN(t)) {
-          const diff = Math.abs(t - parseFloat(thickness));
-          if (diff < minDiff) {
-            minDiff = diff;
-            closest = row;
-          }
-        }
-      }
-      return parseFloat(closest?.[priceCol] || 0);
-    }
-
-    async function calculatePrice(params) {
-      const rate = 7.2;
-      const density = 7850;
-      const volumePerTon = 1 / (density / 1000);
-      const areaPerTon = volumePerTon / (parseFloat(params.thickness) / 1000);
-      const zincCount = Math.max(0, parseFloat(params.zinc || 0) - 20);
-      const zincCost = areaPerTon * zincCount * 0.025;
-      const basePrice = await fetchSheetPrice(params.product, params.thickness);
-      const exFactory = basePrice + zincCost;
-      const fob = exFactory + 200 + (params.port ? 60 : 0);
-      const taxRate = 0.935;
-      return {
-        exFactory,
-        fob,
-        exFactoryTax: exFactory / taxRate,
-        fobTax: fob / taxRate,
-        exFactoryUSD: exFactory / rate,
-        fobUSD: fob / rate,
-        fobTaxUSD: (fob / taxRate) / rate,
-        zincCost
-      };
     }
 
     async function askGPT(text) {
@@ -113,7 +96,10 @@
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
             messages: [
-              { role: "system", content: "你是钢铁外贸专家，尽量准确报价并识别规格。" },
+              {
+                role: "system",
+                content: "You are a professional steel export assistant. You can fluently reply in Arabic, Spanish, Portuguese, Russian, and Chinese depending on the user's input language. Provide accurate, friendly, and concise answers about steel coil prices, export ports, zinc coating, delivery time, and business greetings. If the user asks your name, say: 'My name is Xien. I am an intelligent assistant from the planet CHINACNU.'"
+              },
               { role: "user", content: text }
             ]
           })
@@ -133,24 +119,8 @@
         addMessage("user", input);
         this.value = "";
 
-        const lower = input.toLowerCase();
-        if (quickReplies[lower]) {
-          addMessage("bot", quickReplies[lower]);
-          return;
-        }
-
-        const params = extractParams(input);
-        if (params.product && params.thickness) {
-          const result = await calculatePrice(params);
-          addMessage("bot", `📦 出厂价：¥${result.exFactory.toFixed(2)} / $${result.exFactoryUSD.toFixed(2)}<br>
-          🧾 含税出厂价：¥${result.exFactoryTax.toFixed(2)}<br>
-          🚢 FOB价：¥${result.fob.toFixed(2)} / $${result.fobUSD.toFixed(2)}<br>
-          🧾 含税FOB价：¥${result.fobTax.toFixed(2)} / $${result.fobTaxUSD.toFixed(2)}<br>
-          💡 锌层加价：¥${result.zincCost.toFixed(2)}${params.port ? '（含港口加价 $60）' : ''}`);
-        } else {
-          const gptAnswer = await askGPT(input);
-          addMessage("bot", gptAnswer);
-        }
+        const gptAnswer = await askGPT(input);
+        addMessage("bot", gptAnswer);
       }
     });
   </script>
